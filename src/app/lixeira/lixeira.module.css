@@ -1,0 +1,102 @@
+.header {
+  margin-bottom: 32px;
+}
+
+.tabs {
+  display: flex;
+  gap: 16px;
+  border-bottom: 1px solid var(--border);
+  margin-bottom: 24px;
+}
+
+.tab, .tabActive {
+  padding: 12px 24px;
+  text-decoration: none;
+  font-weight: 500;
+  color: var(--text-muted);
+  border-bottom: 3px solid transparent;
+  transition: all 0.2s;
+}
+
+.tab:hover {
+  color: var(--text-main);
+}
+
+.tabActive {
+  color: var(--primary);
+  border-bottom-color: var(--primary);
+}
+
+.list {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.item {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 20px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.02);
+}
+
+.info {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.info strong {
+  font-size: 1.1rem;
+  color: var(--text-main);
+}
+
+.info span {
+  font-size: 0.85rem;
+  color: var(--text-muted);
+}
+
+.empty {
+  text-align: center;
+  color: var(--text-muted);
+  padding: 40px;
+  background: var(--background);
+  border-radius: 8px;
+  border: 1px dashed var(--border);
+}
+
+.restoreBtn {
+  background-color: var(--surface);
+  color: #10b981; /* green */
+  border: 1px solid #10b981;
+  padding: 8px 16px;
+  border-radius: 4px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.restoreBtn:hover {
+  background-color: #10b981;
+  color: #fff;
+}
+
+.deleteBtn {
+  background-color: var(--surface);
+  color: var(--danger, red);
+  border: 1px solid var(--danger, red);
+  padding: 8px 16px;
+  border-radius: 4px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.deleteBtn:hover {
+  background-color: var(--danger, red);
+  color: #fff;
+}

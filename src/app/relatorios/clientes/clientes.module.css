@@ -1,0 +1,140 @@
+.container {
+  max-width: 1200px;
+  margin: 0 auto;
+}
+
+.header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 2rem;
+}
+
+.titleArea h1 {
+  font-size: 1.5rem;
+  font-weight: 700;
+  color: var(--text-main);
+  margin-bottom: 0.25rem;
+}
+
+.titleArea p {
+  color: var(--text-muted);
+  font-size: 0.95rem;
+}
+
+.backBtn {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.5rem 1rem;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  color: var(--text-main);
+  text-decoration: none;
+  font-size: 0.9rem;
+  font-weight: 500;
+  transition: all 0.2s;
+}
+
+.backBtn:hover {
+  background: var(--background);
+  border-color: #cbd5e1;
+}
+
+/* Resumo Cards */
+.summaryGrid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+  gap: 1.5rem;
+  margin-bottom: 2rem;
+}
+
+.summaryCard {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 1.5rem;
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+}
+
+.cardIcon {
+  width: 48px;
+  height: 48px;
+  border-radius: 8px;
+  background: #dcfce7;
+  color: #16a34a;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.cardIcon.gray { background: #f1f5f9; color: #64748b; }
+.cardIcon.red { background: #fee2e2; color: #ef4444; }
+.cardIcon.blue { background: #dbeafe; color: #3b82f6; }
+
+.cardInfo {
+  flex: 1;
+  min-width: 0;
+}
+
+.cardLabel {
+  font-size: 0.85rem;
+  color: var(--text-muted);
+  margin-bottom: 0.25rem;
+}
+
+.cardValue {
+  font-size: 1.5rem;
+  font-weight: 700;
+  color: var(--text-main);
+}
+
+/* Tabela */
+.tableContainer {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  overflow: hidden;
+}
+
+.table {
+  width: 100%;
+  border-collapse: collapse;
+}
+
+.table th, .table td {
+  padding: 1rem;
+  text-align: left;
+  border-bottom: 1px solid var(--border);
+}
+
+.table th {
+  background: var(--background);
+  font-weight: 600;
+  font-size: 0.85rem;
+  color: var(--text-muted);
+  text-transform: uppercase;
+}
+
+.table tr:last-child td {
+  border-bottom: none;
+}
+
+.table td {
+  font-size: 0.95rem;
+  color: var(--text-main);
+}
+
+.statusBadge {
+  display: inline-block;
+  padding: 0.25rem 0.5rem;
+  border-radius: 99px;
+  font-size: 0.75rem;
+  font-weight: 600;
+}
+
+.statusBadge.ativo { background: #dcfce7; color: #16a34a; }
+.statusBadge.inativo { background: #fee2e2; color: #ef4444; }

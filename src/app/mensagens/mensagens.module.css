@@ -1,0 +1,27 @@
+.userItem {
+  display: flex;
+  align-items: center;
+  padding: 16px 20px;
+  border-bottom: 1px solid var(--border);
+  text-decoration: none;
+  color: var(--text-main);
+  transition: all 0.2s ease;
+}
+
+.userItem:hover {
+  background: var(--bg-hover);
+}
+
+.userItemActive {
+  background: rgba(37, 99, 235, 0.05); /* Primary color low opacity */
+  border-left: 4px solid var(--primary);
+}
+
+.badge {
+  background: var(--danger);
+  color: white;
+  font-size: 0.75rem;
+  font-weight: bold;
+  padding: 2px 8px;
+  border-radius: 12px;
+}

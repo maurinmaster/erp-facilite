@@ -6,12 +6,31 @@
     "dev": "next dev",
     "build": "next build",
     "start": "next start",
-    "lint": "eslint"
+    "lint": "next lint",
+    "ws": "node server/ws.js"
   },
   "dependencies": {
+    "@tiptap/extension-floating-menu": "^3.26.0",
+    "@tiptap/extension-image": "^3.26.0",
+    "@tiptap/extension-link": "^3.26.0",
+    "@tiptap/extension-task-item": "^3.26.0",
+    "@tiptap/extension-task-list": "^3.26.0",
+    "@tiptap/pm": "^3.26.0",
+    "@tiptap/react": "^3.26.0",
+    "@tiptap/starter-kit": "^3.26.0",
+    "cors": "^2.8.6",
+    "emoji-picker-react": "^4.19.1",
+    "express": "^5.2.1",
+    "jose": "^6.2.3",
+    "lucide-react": "^1.17.0",
+    "mysql2": "^3.22.4",
     "next": "16.2.7",
     "react": "19.2.4",
-    "react-dom": "19.2.4"
+    "react-dom": "19.2.4",
+    "react-hot-toast": "^2.6.0",
+    "recharts": "^3.8.1",
+    "socket.io": "^4.8.3",
+    "socket.io-client": "^4.8.3"
   },
   "devDependencies": {
     "@types/node": "^20",
