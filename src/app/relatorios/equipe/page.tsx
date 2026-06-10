@@ -57,6 +57,48 @@ export default async function RelatorioEquipePage() {
             <div className={styles.cardValue}>{relatorio.projetos_alocados}</div>
           </div>
         </div>
+
+        <div className={styles.summaryCard}>
+          <div className={`${styles.cardIcon}`} style={{ background: '#fef3c7', color: '#d97706' }}>
+            <CheckSquare size={24} />
+          </div>
+          <div className={styles.cardInfo}>
+            <div className={styles.cardLabel}>Subtarefas Concluídas</div>
+            <div className={styles.cardValue}>{relatorio.subtarefas_concluidas_total}</div>
+          </div>
+        </div>
+
+        <div className={styles.summaryCard}>
+          <div className={`${styles.cardIcon}`} style={{ background: '#fee2e2', color: '#ef4444' }}>
+            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M13 2L3 14h9l-1 8 10-12h-9l1-8z"/></svg>
+          </div>
+          <div className={styles.cardInfo}>
+            <div className={styles.cardLabel}>Pontos de Esforço Totais</div>
+            <div className={styles.cardValue}>{relatorio.pontos_esforco_total}</div>
+          </div>
+        </div>
+      </div>
+
+      <div className={styles.summaryGrid} style={{ marginTop: '16px' }}>
+        <div className={styles.summaryCard}>
+          <div className={`${styles.cardIcon} ${styles.success}`}>
+            <CheckSquare size={24} />
+          </div>
+          <div className={styles.cardInfo}>
+            <div className={styles.cardLabel}>Tarefas no Prazo (Interno)</div>
+            <div className={styles.cardValue}>{relatorio.tarefas_no_prazo_total}</div>
+          </div>
+        </div>
+
+        <div className={styles.summaryCard}>
+          <div className={`${styles.cardIcon} ${styles.red}`}>
+            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10"></circle><polyline points="12 6 12 12 16 14"></polyline></svg>
+          </div>
+          <div className={styles.cardInfo}>
+            <div className={styles.cardLabel}>Tarefas em Atraso (Interno)</div>
+            <div className={styles.cardValue}>{relatorio.tarefas_em_atraso_total}</div>
+          </div>
+        </div>
       </div>
 
       <div className={styles.tableContainer}>
@@ -67,6 +109,10 @@ export default async function RelatorioEquipePage() {
               <th>Perfil</th>
               <th>Projetos Atuais na Mão</th>
               <th>Tarefas do Checklist Concluídas</th>
+              <th>Tarefas no Prazo</th>
+              <th>Tarefas em Atraso</th>
+              <th>Subtarefas Concluídas</th>
+              <th>Pontos de Esforço</th>
             </tr>
           </thead>
           <tbody>
@@ -87,11 +133,25 @@ export default async function RelatorioEquipePage() {
                 <td>
                   <strong>{membro.tarefas_concluidas}</strong> tarefa(s)
                 </td>
+                <td>
+                  <span style={{ color: 'var(--success)' }}><strong>{membro.tarefas_no_prazo}</strong></span> tarefa(s)
+                </td>
+                <td>
+                  <span style={{ color: 'var(--danger)' }}><strong>{membro.tarefas_em_atraso}</strong></span> tarefa(s)
+                </td>
+                <td>
+                  <strong>{membro.subtarefas_concluidas}</strong> subtarefa(s)
+                </td>
+                <td>
+                  <span className={`${styles.statusBadge} ${styles.success}`}>
+                    🔥 {membro.pontos_esforco} pts
+                  </span>
+                </td>
               </tr>
             ))}
             {relatorio.detalhes.length === 0 && (
               <tr>
-                <td colSpan={4} style={{ textAlign: 'center', padding: '2rem', color: 'var(--text-muted)' }}>
+                <td colSpan={8} style={{ textAlign: 'center', padding: '2rem', color: 'var(--text-muted)' }}>
                   Nenhum colaborador encontrado.
                 </td>
               </tr>

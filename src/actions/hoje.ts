@@ -9,6 +9,7 @@ export interface PanoramaItem {
   projeto_status: string;
   prioridade: string;
   prazo: string | null;
+  prazo_interno: string | null;
   tags: string[];
   servico_nome: string;
   servico_tipo: string;
@@ -24,6 +25,7 @@ export interface MicroTarefaItem {
   projeto_status: string;
   prioridade: string;
   prazo: string | null;
+  prazo_interno: string | null;
   servico_nome: string;
   cliente_nome: string;
   agente_id: number | null;
@@ -42,6 +44,8 @@ export interface PanoramaHoje {
 export async function getPanoramaHoje(userId?: number): Promise<PanoramaHoje> {
   const session = await getSession();
   if (!session) throw new Error('Não autorizado');
+  
+  console.log('getPanoramaHoje called with userId:', userId, 'type:', typeof userId);
 
   let query = `
     SELECT 
@@ -49,6 +53,7 @@ export async function getPanoramaHoje(userId?: number): Promise<PanoramaHoje> {
       pp.status AS projeto_status,
       pp.prioridade,
       pp.prazo,
+      pp.prazo_interno,
       pp.tags,
       sc.nome AS servico_nome,
       sc.tipo AS servico_tipo,
@@ -98,6 +103,7 @@ export async function getPanoramaHoje(userId?: number): Promise<PanoramaHoje> {
       projeto_status: row.projeto_status,
       prioridade: row.prioridade,
       prazo: row.prazo,
+      prazo_interno: row.prazo_interno,
       tags: tagsArr,
       servico_nome: row.servico_nome,
       servico_tipo: row.servico_tipo,
@@ -132,6 +138,7 @@ export async function getPanoramaHoje(userId?: number): Promise<PanoramaHoje> {
       pp.status AS projeto_status,
       pp.prioridade,
       pp.prazo,
+      pp.prazo_interno,
       sc.nome AS servico_nome,
       c.nome AS cliente_nome
     FROM tarefas_producao tp
@@ -149,10 +156,10 @@ export async function getPanoramaHoje(userId?: number): Promise<PanoramaHoje> {
   `;
 
   if (userId) {
-    queryMicro += ` AND tp.usuario_id = ? `;
+    queryMicro += ` AND (tp.usuario_id = ? OR (tp.usuario_id IS NULL AND pp.id IN (SELECT projeto_id FROM projeto_responsaveis WHERE usuario_id = ?))) `;
   }
 
-  const [rowsMicro] = await pool.query<RowDataPacket[]>(queryMicro, userId ? [userId] : []);
+  const [rowsMicro] = await pool.query<RowDataPacket[]>(queryMicro, userId ? [userId, userId] : []);
   const microTarefas = rowsMicro as MicroTarefaItem[];
 
   const entregasProximas = items.filter(i => {

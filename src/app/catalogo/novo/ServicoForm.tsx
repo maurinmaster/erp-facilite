@@ -47,7 +47,19 @@ export default function ServicoForm({ briefingTemplates }: Props) {
           </div>
           <div className={`${styles.formGroup} ${styles.colSpan2}`}>
             <label className={styles.label}>Template de Briefing Padrão</label>
-            <select name="briefing_template_id" className={styles.input}>
+            <select 
+              name="briefing_template_id" 
+              className={styles.input}
+              onChange={(e) => {
+                const selectedId = Number(e.target.value);
+                if (selectedId) {
+                  const template = briefingTemplates.find(bt => bt.id === selectedId);
+                  if (template && template.campos.length > 0) {
+                    setTarefas(template.campos);
+                  }
+                }
+              }}
+            >
               <option value="">Nenhum template selecionado</option>
               {briefingTemplates.map(bt => (
                 <option key={bt.id} value={bt.id}>{bt.titulo}</option>

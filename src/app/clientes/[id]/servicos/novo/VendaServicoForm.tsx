@@ -6,6 +6,7 @@ import Link from 'next/link';
 import { ativarServico, updateItemContrato } from '@/actions/producao';
 import { ServicoCatalogoComTemplates } from '@/actions/catalogo';
 import styles from '../../../clientes.module.css';
+import TipTapEditor from '@/app/components/TipTapEditor';
 import React from 'react';
 
 interface Props {
@@ -169,13 +170,13 @@ export default function VendaServicoForm({ clienteId, servicosCatalogo, initialI
         {/* 2.1 TEXTO LONGO */}
         <div style={{ marginBottom: '24px' }}>
           <label className={styles.label}>Descrição Geral do Projeto (Texto Livre)</label>
-          <textarea 
-            className={styles.input} 
-            rows={4} 
-            placeholder="Cole aqui notas de reunião, resumos do que foi acordado..."
-            value={longText}
-            onChange={(e) => setLongText(e.target.value)}
-          ></textarea>
+          <div style={{ border: '1px solid var(--border)', borderRadius: '8px', backgroundColor: 'var(--background)' }}>
+            <TipTapEditor
+              value={longText}
+              onChange={setLongText}
+              placeholder="Cole aqui notas de reunião, resumos do que foi acordado..."
+            />
+          </div>
         </div>
 
         {/* 2.2 ACESSOS */}

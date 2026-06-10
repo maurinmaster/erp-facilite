@@ -143,6 +143,7 @@ export async function getProjetosKanban() {
         pp.status AS projeto_status,
         pp.prioridade,
         pp.prazo,
+        pp.prazo_interno,
         pp.tags,
         ci.id AS contrato_item_id,
         ci.dados_acordados,
@@ -169,10 +170,11 @@ export async function getProjetosKanban() {
 
     // Busca Checklist
     const [checklistRows] = await pool.query<RowDataPacket[]>(
-      `SELECT tp.id, tp.projeto_producao_id, tp.titulo, tp.status, tp.usuario_id, u.nome AS responsavel_nome 
+      `SELECT tp.id, tp.projeto_producao_id, tp.titulo, tp.status, tp.usuario_id, tp.complexidade, tp.parent_id, u.nome AS responsavel_nome 
        FROM tarefas_producao tp 
        LEFT JOIN usuarios u ON tp.usuario_id = u.id 
-       WHERE tp.projeto_producao_id IN (?) AND tp.deleted_at IS NULL`,
+       WHERE tp.projeto_producao_id IN (?) AND tp.deleted_at IS NULL
+       ORDER BY tp.created_at ASC`,
       [projetoIds]
     );
 
@@ -259,6 +261,7 @@ export async function getProjetosKanban() {
         projeto_status: row.projeto_status,
         prioridade: row.prioridade,
         prazo: row.prazo,
+        prazo_interno: row.prazo_interno,
         tags: tagsArr,
         contrato_item_id: row.contrato_item_id,
         servico_nome: row.servico_nome,
@@ -407,7 +410,7 @@ export async function removeResponsavel(projetoId: number, usuarioId: number) {
   }
 }
 
-export async function updateProjetoConfig(projetoId: number, config: { prioridade?: string, prazo?: string, tags?: string[] }) {
+export async function updateProjetoConfig(projetoId: number, config: { prioridade?: string, prazo?: string | null, prazo_interno?: string | null, tags?: string[] }) {
   try {
     const updates = [];
     const values = [];
@@ -423,6 +426,10 @@ export async function updateProjetoConfig(projetoId: number, config: { prioridad
       updates.push('tags = ?');
       values.push(JSON.stringify(config.tags));
     }
+    if (config.prazo_interno !== undefined) {
+      updates.push('prazo_interno = ?');
+      values.push(config.prazo_interno);
+    }
     
     if (updates.length > 0) {
       values.push(projetoId);
@@ -431,6 +438,7 @@ export async function updateProjetoConfig(projetoId: number, config: { prioridad
       const parts = [];
       if (config.prioridade) parts.push(`Prioridade para ${config.prioridade}`);
       if (config.prazo !== undefined) parts.push(config.prazo ? `Prazo para ${config.prazo}` : `Removeu o prazo`);
+      if (config.prazo_interno !== undefined) parts.push(config.prazo_interno ? `Prazo Interno para ${config.prazo_interno}` : `Removeu o prazo interno`);
       if (config.tags !== undefined) parts.push(`Tags atualizadas`);
       
       await registrarLog(projetoId, 'CONFIG_CHANGE', `Atualizou: ${parts.join(', ')}`);
@@ -446,18 +454,30 @@ export async function updateProjetoConfig(projetoId: number, config: { prioridad
 
 export async function updateChecklistStatus(tarefaId: number, status: string) {
   try {
-    const [tRows] = await pool.query<RowDataPacket[]>('SELECT projeto_producao_id, titulo FROM tarefas_producao WHERE id = ?', [tarefaId]);
+    const [tRows] = await pool.query<RowDataPacket[]>('SELECT id, projeto_producao_id, titulo, parent_id FROM tarefas_producao WHERE id = ?', [tarefaId]);
+    if (tRows.length === 0) return { success: false };
     
+    const tarefa = tRows[0];
+
     if (status === 'Concluída') {
       await pool.query('UPDATE tarefas_producao SET status = ?, concluido_em = NOW() WHERE id = ?', [status, tarefaId]);
     } else {
       await pool.query('UPDATE tarefas_producao SET status = ?, concluido_em = NULL WHERE id = ?', [status, tarefaId]);
     }
     
-    if (tRows.length > 0) {
-      const pId = tRows[0].projeto_producao_id;
-      await registrarLog(pId, 'CHECKLIST_STATUS', `Marcou a tarefa "${tRows[0].titulo}" como ${status}`);
+    // Auto-complete parent task logic
+    if (tarefa.parent_id) {
+      const [siblings] = await pool.query<RowDataPacket[]>('SELECT status FROM tarefas_producao WHERE parent_id = ? AND deleted_at IS NULL', [tarefa.parent_id]);
+      const allCompleted = siblings.length > 0 && siblings.every(s => s.status === 'Concluída');
+      if (allCompleted) {
+        await pool.query('UPDATE tarefas_producao SET status = ?, concluido_em = NOW() WHERE id = ?', ['Concluída', tarefa.parent_id]);
+      } else {
+        await pool.query('UPDATE tarefas_producao SET status = ?, concluido_em = NULL WHERE id = ?', ['Pendente', tarefa.parent_id]);
+      }
     }
+    
+    const pId = tarefa.projeto_producao_id;
+    await registrarLog(pId, 'CHECKLIST_STATUS', `Marcou a tarefa "${tarefa.titulo}" como ${status}`);
 
     revalidatePath('/', 'layout');
     return { success: true };
@@ -477,12 +497,12 @@ export async function assignChecklistItem(tarefaId: number, usuarioId: number | 
   }
 }
 
-export async function addChecklistItem(projetoId: number, titulo: string, usuarioId?: number) {
+export async function addChecklistItem(projetoId: number, titulo: string, usuarioId?: number, complexidade: string = 'Normal', parentId: number | null = null) {
   try {
     const uId = usuarioId || null;
     await pool.query(
-      'INSERT INTO tarefas_producao (projeto_producao_id, titulo, usuario_id) VALUES (?, ?, ?)', 
-      [projetoId, titulo, uId]
+      'INSERT INTO tarefas_producao (projeto_producao_id, titulo, usuario_id, complexidade, parent_id) VALUES (?, ?, ?, ?, ?)', 
+      [projetoId, titulo, uId, complexidade, parentId]
     );
 
     let assignedMsg = '';

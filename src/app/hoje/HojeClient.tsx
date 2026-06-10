@@ -6,19 +6,22 @@ import { getPanoramaHoje, PanoramaHoje, PanoramaItem, MicroTarefaItem } from '@/
 import { CalendarDays, Users, User, ListTodo, AlertTriangle, Package, Sparkles, CheckCircle, MessageSquare } from 'lucide-react';
 import styles from './hoje.module.css';
 
-export default function HojeClient({ initialData, userId }: { initialData: PanoramaHoje, userId: number }) {
+export default function HojeClient({ initialData, userId, usuarios }: { initialData: PanoramaHoje, userId: number, usuarios: { id: number, nome: string }[] }) {
   const [view, setView] = useState<'geral' | 'individual'>('geral');
+  const [selectedUserId, setSelectedUserId] = useState<number>(userId);
   const [data, setData] = useState<PanoramaHoje>(initialData);
   const [loading, setLoading] = useState(false);
 
   useEffect(() => {
     async function fetchData() {
+      console.log('fetchData called with view:', view, 'selectedUserId:', selectedUserId);
       setLoading(true);
       try {
-        const newData = await getPanoramaHoje(view === 'individual' ? userId : undefined);
+        const newData = await getPanoramaHoje(view === 'individual' ? selectedUserId : undefined);
+        console.log('newData received:', newData);
         setData(newData);
       } catch (e) {
-        console.error(e);
+        console.error('Error fetching newData:', e);
       } finally {
         setLoading(false);
       }
@@ -29,7 +32,7 @@ export default function HojeClient({ initialData, userId }: { initialData: Panor
     } else {
       setData(initialData); // Use the pre-fetched global data
     }
-  }, [view, userId, initialData]);
+  }, [view, selectedUserId, initialData]);
 
   const dateOptions: Intl.DateTimeFormatOptions = { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' };
   const todayString = new Date().toLocaleDateString('pt-BR', dateOptions);
@@ -58,9 +61,17 @@ export default function HojeClient({ initialData, userId }: { initialData: Panor
     const diff = getDaysDiff(item.prazo);
     let diffStr = '';
     if (diff !== null) {
-      if (diff < 0) diffStr = `${Math.abs(diff)} dias`;
-      else if (diff === 0) diffStr = 'Hoje';
-      else diffStr = `${diff} dias`;
+      if (diff < 0) diffStr = `${Math.abs(diff)} dias (Cliente)`;
+      else if (diff === 0) diffStr = 'Hoje (Cliente)';
+      else diffStr = `${diff} dias (Cliente)`;
+    }
+
+    const diffInterno = getDaysDiff(item.prazo_interno);
+    let diffInternoStr = '';
+    if (diffInterno !== null) {
+      if (diffInterno < 0) diffInternoStr = `${Math.abs(diffInterno)} dias (Int)`;
+      else if (diffInterno === 0) diffInternoStr = 'Hoje (Int)';
+      else diffInternoStr = `${diffInterno} dias (Int)`;
     }
 
     return (
@@ -77,9 +88,14 @@ export default function HojeClient({ initialData, userId }: { initialData: Panor
           </div>
         </div>
         <div className={styles.cardRight}>
-          {diffStr && (
-            <span className={`${styles.daysLabel} ${isAtrasado ? styles.daysLabelRed : ''}`}>{diffStr}</span>
-          )}
+          <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: '4px' }}>
+            {diffStr && (
+              <span className={`${styles.daysLabel} ${diff !== null && diff < 0 ? styles.daysLabelRed : ''}`}>{diffStr}</span>
+            )}
+            {diffInternoStr && (
+              <span className={`${styles.daysLabel}`} style={{ backgroundColor: '#e0f2fe', color: diffInterno !== null && diffInterno < 0 ? 'var(--danger)' : '#0369a1', borderColor: '#bae6fd' }}>{diffInternoStr}</span>
+            )}
+          </div>
           {item.responsaveis_iniciais.length > 0 && (
             <div style={{ display: 'flex', gap: '-8px' }}>
               {item.responsaveis_iniciais.map((ini, i) => (
@@ -103,8 +119,8 @@ export default function HojeClient({ initialData, userId }: { initialData: Panor
   };
 
   const sortedMicroTarefas = [...data.microTarefas].sort((a, b) => {
-    const diffA = getDaysDiff(a.prazo) ?? 999;
-    const diffB = getDaysDiff(b.prazo) ?? 999;
+    const diffA = getDaysDiff(a.prazo_interno) ?? getDaysDiff(a.prazo) ?? 999;
+    const diffB = getDaysDiff(b.prazo_interno) ?? getDaysDiff(b.prazo) ?? 999;
     const prioA = priorityScore(a.prioridade);
     const prioB = priorityScore(b.prioridade);
     if (prioA !== prioB) return prioB - prioA;
@@ -149,6 +165,18 @@ export default function HojeClient({ initialData, userId }: { initialData: Panor
           >
             <User size={18} /> Individual
           </button>
+          
+          {view === 'individual' && (
+            <select 
+              value={selectedUserId}
+              onChange={(e) => setSelectedUserId(Number(e.target.value))}
+              style={{ marginLeft: '12px', padding: '6px', borderRadius: '4px', border: '1px solid var(--border)', fontSize: '0.9rem', outline: 'none' }}
+            >
+              {usuarios.map(u => (
+                <option key={u.id} value={u.id}>{u.nome}</option>
+              ))}
+            </select>
+          )}
         </div>
       </div>
 
@@ -177,7 +205,9 @@ export default function HojeClient({ initialData, userId }: { initialData: Panor
                       <div className={styles.groupBody}>
                         {group.tarefas.map(t => {
                            const diff = getDaysDiff(t.prazo);
+                           const diffInt = getDaysDiff(t.prazo_interno);
                            const isAtrasado = diff !== null && diff < 0;
+                           const isAtrasadoInt = diffInt !== null && diffInt < 0;
                            return (
                              <Link href={`/producao?projeto_id=${t.projeto_id}`} key={t.tarefa_id} className={styles.microTaskItem}>
                                <div className={styles.microTaskLeft}>
@@ -189,7 +219,8 @@ export default function HojeClient({ initialData, userId }: { initialData: Panor
                                    {view === 'geral' ? `${t.cliente_nome} • ` : ''}{t.servico_nome}
                                  </span>
                                  {renderPrioridadeTag(t.prioridade)}
-                                 {isAtrasado && <span className={`${styles.tag} ${styles.tagRed}`}>Atrasada</span>}
+                                 {isAtrasadoInt && <span className={`${styles.tag}`} style={{ backgroundColor: '#fee2e2', color: 'var(--danger)', border: '1px solid #fecaca' }}>Atrasada (Int)</span>}
+                                 {isAtrasado && !isAtrasadoInt && <span className={`${styles.tag} ${styles.tagRed}`}>Atrasada</span>}
                                </div>
                              </Link>
                            );

@@ -286,3 +286,46 @@
 .avatarInteractive:hover .avatarOverlay {
   opacity: 1;
 }
+
+.actionBtn {
+  font-size: 0.8rem;
+  padding: 8px 12px;
+  background: var(--surface);
+  color: var(--text-main);
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  cursor: pointer;
+  font-weight: 500;
+  transition: all 0.2s ease;
+  flex: 1;
+  text-align: center;
+  display: inline-block;
+  text-decoration: none;
+}
+
+.actionBtn:hover {
+  background: #f1f5f9;
+  border-color: #cbd5e1;
+}
+
+.actionBtnPrimary {
+  color: var(--primary);
+  border-color: rgba(79, 70, 229, 0.3);
+  background: rgba(79, 70, 229, 0.05);
+}
+
+.actionBtnPrimary:hover {
+  background: rgba(79, 70, 229, 0.1);
+  border-color: rgba(79, 70, 229, 0.5);
+}
+
+.actionBtnDanger {
+  color: #dc2626;
+  border-color: #fecaca;
+  background: #fef2f2;
+}
+
+.actionBtnDanger:hover {
+  background: #fee2e2;
+  border-color: #fca5a5;
+}

@@ -20,10 +20,13 @@ export default function ProjectModal({ projeto, usuarios, sessao, onClose, onRef
   // Local state for config form
   const [prioridade, setPrioridade] = useState(projeto.prioridade || 'Normal');
   const [prazo, setPrazo] = useState(projeto.prazo ? new Date(projeto.prazo).toISOString().split('T')[0] : '');
+  const [prazoInterno, setPrazoInterno] = useState(projeto.prazo_interno ? new Date(projeto.prazo_interno).toISOString().split('T')[0] : '');
   
   // Local state for new checklist item
   const [newChecklistTitle, setNewChecklistTitle] = useState('');
   const [newChecklistUserId, setNewChecklistUserId] = useState('');
+  const [newChecklistComplexidade, setNewChecklistComplexidade] = useState('Normal');
+  const [addingSubtaskTo, setAddingSubtaskTo] = useState<number | null>(null);
 
   // Local state for Comments
   const [comentario, setComentario] = useState('');
@@ -33,9 +36,11 @@ export default function ProjectModal({ projeto, usuarios, sessao, onClose, onRef
   const fileInputRef = useRef<HTMLInputElement>(null);
   const editorRef = useRef<TipTapRef>(null);
 
-  const canAssign = sessao?.permissoes?.producao === 'full';
-  const canEditChecklist = sessao?.permissoes?.producao === 'full' || sessao?.permissoes?.producao === 'limited';
-  const canManageChecklist = sessao?.permissoes?.producao === 'full';
+  const isAdmin = sessao?.perfil === 'Admin';
+  const canAssign = isAdmin || sessao?.permissoes?.producao === 'full';
+  const canEditConfig = isAdmin || sessao?.permissoes?.producao === 'full';
+  const canEditChecklist = isAdmin || sessao?.permissoes?.producao === 'full' || sessao?.permissoes?.producao === 'limited';
+  const canManageChecklist = isAdmin || sessao?.permissoes?.producao === 'full';
 
   const briefing = projeto.dados_acordados || {};
 
@@ -43,7 +48,8 @@ export default function ProjectModal({ projeto, usuarios, sessao, onClose, onRef
     try {
       await updateProjetoConfig(projeto.projeto_id, { 
         prioridade, 
-        prazo: prazo || undefined 
+        prazo: prazo || null,
+        prazo_interno: prazoInterno || null
       });
       onRefresh();
       alert("Configurações atualizadas!");
@@ -148,16 +154,20 @@ export default function ProjectModal({ projeto, usuarios, sessao, onClose, onRef
     }
   };
 
-  const handleAddChecklist = async () => {
+  const handleAddChecklist = async (parentId: number | null = null) => {
     if (!newChecklistTitle.trim()) return;
     try {
       await addChecklistItem(
         projeto.projeto_id, 
         newChecklistTitle, 
-        newChecklistUserId ? Number(newChecklistUserId) : undefined
+        newChecklistUserId ? Number(newChecklistUserId) : undefined,
+        newChecklistComplexidade,
+        parentId
       );
       setNewChecklistTitle('');
       setNewChecklistUserId('');
+      setNewChecklistComplexidade('Normal');
+      setAddingSubtaskTo(null);
       onRefresh();
     } catch (e) {
       alert("Erro ao adicionar item no checklist.");
@@ -223,7 +233,7 @@ export default function ProjectModal({ projeto, usuarios, sessao, onClose, onRef
               <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px', marginTop: '16px' }}>
                 <div className={styles.formGroup}>
                   <label>Prioridade</label>
-                  <select value={prioridade} onChange={(e) => setPrioridade(e.target.value)}>
+                  <select value={prioridade} onChange={(e) => setPrioridade(e.target.value)} disabled={!canEditConfig}>
                     <option value="Baixa">Baixa</option>
                     <option value="Normal">Normal</option>
                     <option value="Alta">Alta</option>
@@ -233,11 +243,17 @@ export default function ProjectModal({ projeto, usuarios, sessao, onClose, onRef
                   </select>
                 </div>
                 <div className={styles.formGroup}>
-                  <label>Prazo de Entrega</label>
-                  <input type="date" value={prazo} onChange={(e) => setPrazo(e.target.value)} />
+                  <label>Prazo de Entrega (Cliente)</label>
+                  <input type="date" value={prazo} onChange={(e) => setPrazo(e.target.value)} disabled={!canEditConfig} />
+                </div>
+                <div className={styles.formGroup}>
+                  <label>Prazo de Entrega Interna</label>
+                  <input type="date" value={prazoInterno} onChange={(e) => setPrazoInterno(e.target.value)} disabled={!canEditConfig} />
                 </div>
               </div>
-              <button className={styles.btnPrimary} onClick={handleSalvarConfig}>Salvar Configurações</button>
+              {canEditConfig && (
+                <button className={styles.btnPrimary} onClick={handleSalvarConfig}>Salvar Configurações</button>
+              )}
 
               <hr style={{ margin: '24px 0', border: 'none', borderTop: '1px solid var(--border)' }} />
 
@@ -272,34 +288,45 @@ export default function ProjectModal({ projeto, usuarios, sessao, onClose, onRef
 
           {activeTab === 'checklist' && (
             <div>
-              <h3>Checklist de Produção</h3>
-              <p style={{ fontSize: '0.85rem', color: 'var(--text-muted)', marginBottom: '16px' }}>
-                Marque as tarefas conforme forem concluídas ou delegue novas tarefas para a equipe.
-              </p>
-              
               {canManageChecklist && (
-                <div style={{ display: 'flex', gap: '8px', marginBottom: '24px', background: 'var(--background)', padding: '12px', borderRadius: '8px', border: '1px dashed var(--border)' }}>
+                <div style={{ display: 'flex', gap: '8px', marginBottom: '16px' }}>
                   <input 
                     type="text" 
-                    placeholder="Adicionar nova tarefa..." 
-                    value={newChecklistTitle}
-                    onChange={(e) => setNewChecklistTitle(e.target.value)}
-                    style={{ flex: 1, padding: '8px 12px', border: '1px solid var(--border)', borderRadius: '4px' }}
-                    onKeyDown={(e) => {
-                      if (e.key === 'Enter') handleAddChecklist();
-                    }}
+                    placeholder="Nova tarefa..." 
+                    value={addingSubtaskTo === null ? newChecklistTitle : ''} 
+                    onChange={e => {
+                      if (addingSubtaskTo === null) setNewChecklistTitle(e.target.value);
+                    }} 
+                    style={{ flex: 1, padding: '8px', border: '1px solid var(--border)', borderRadius: '4px' }}
+                    onKeyDown={e => { if (e.key === 'Enter' && addingSubtaskTo === null) handleAddChecklist(null) }}
+                    disabled={addingSubtaskTo !== null}
                   />
                   <select 
-                    value={newChecklistUserId} 
-                    onChange={(e) => setNewChecklistUserId(e.target.value)}
-                    style={{ padding: '8px', borderRadius: '4px', border: '1px solid var(--border)' }}
+                    value={addingSubtaskTo === null ? newChecklistComplexidade : 'Normal'} 
+                    onChange={e => {
+                      if (addingSubtaskTo === null) setNewChecklistComplexidade(e.target.value);
+                    }} 
+                    style={{ padding: '8px', border: '1px solid var(--border)', borderRadius: '4px' }}
+                    disabled={addingSubtaskTo !== null}
                   >
-                    <option value="">Responsável</option>
+                    <option value="Baixa">Baixa</option>
+                    <option value="Normal">Normal</option>
+                    <option value="Alta">Alta</option>
+                  </select>
+                  <select 
+                    value={addingSubtaskTo === null ? newChecklistUserId : ''} 
+                    onChange={e => {
+                      if (addingSubtaskTo === null) setNewChecklistUserId(e.target.value);
+                    }} 
+                    style={{ padding: '8px', border: '1px solid var(--border)', borderRadius: '4px' }}
+                    disabled={addingSubtaskTo !== null}
+                  >
+                    <option value="">(Sem responsável)</option>
                     {usuarios.map(u => (
                       <option key={u.id} value={u.id}>{u.nome}</option>
                     ))}
                   </select>
-                  <button onClick={handleAddChecklist} style={{ padding: '8px 16px', background: 'var(--primary)', color: '#fff', border: 'none', borderRadius: '4px', cursor: 'pointer' }}>
+                  <button onClick={() => handleAddChecklist(null)} disabled={addingSubtaskTo !== null} style={{ padding: '8px 16px', background: 'var(--primary)', color: '#fff', border: 'none', borderRadius: '4px', cursor: addingSubtaskTo === null ? 'pointer' : 'not-allowed', opacity: addingSubtaskTo === null ? 1 : 0.5 }}>
                     Adicionar
                   </button>
                 </div>
@@ -308,50 +335,122 @@ export default function ProjectModal({ projeto, usuarios, sessao, onClose, onRef
               {projeto.checklist.length === 0 ? (
                 <p style={{ fontSize: '0.9rem', color: 'var(--text-muted)' }}>Este serviço ainda não possui tarefas no checklist.</p>
               ) : (
-                projeto.checklist.map((item: any) => (
-                  <div key={item.id} className={`${styles.checklistItem} ${item.status === 'Concluída' ? styles.done : ''}`} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '12px', flex: 1 }}>
-                      <input 
-                        type="checkbox" 
-                        checked={item.status === 'Concluída'} 
-                        onChange={() => handleToggleChecklist(item.id, item.status)} 
-                        disabled={!canEditChecklist}
-                        style={{ width: '16px', height: '16px', cursor: canEditChecklist ? 'pointer' : 'default' }}
-                      />
-                      <div style={{ flex: 1, textDecoration: item.status === 'Concluída' ? 'line-through' : 'none', color: item.status === 'Concluída' ? 'var(--text-muted)' : 'var(--text-main)', cursor: canEditChecklist ? 'pointer' : 'default' }} onClick={() => handleToggleChecklist(item.id, item.status)}>
-                        {item.titulo}
-                      </div>
-                      
-                      {canManageChecklist ? (
-                        <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                          <select 
-                            value={item.usuario_id || ''} 
-                            onChange={(e) => handleAssignChecklist(item.id, e.target.value ? Number(e.target.value) : null)}
-                            style={{ fontSize: '0.75rem', padding: '2px 4px', borderRadius: '4px', border: '1px solid var(--border)' }}
-                          >
-                            <option value="">Sem responsável</option>
-                            {usuarios.map(u => (
-                              <option key={u.id} value={u.id}>{u.nome}</option>
-                            ))}
-                          </select>
-                          <button 
-                            onClick={() => handleDeleteChecklist(item.id)}
-                            style={{ background: 'transparent', border: 'none', color: 'var(--danger)', cursor: 'pointer', padding: '4px', fontSize: '1rem' }}
-                            title="Excluir tarefa"
-                          >
-                            &times;
-                          </button>
+                (() => {
+                  const parentTasks = projeto.checklist.filter((c: any) => !c.parent_id);
+                  
+                  const renderItem = (item: any, isSubtask = false) => {
+                    const children = projeto.checklist.filter((c: any) => c.parent_id === item.id);
+                    const hasChildren = children.length > 0;
+                    const disabledCheckbox = !canEditChecklist || hasChildren;
+
+                    const getComplexidadeColor = (c: string) => {
+                      if (c === 'Baixa') return '#10b981';
+                      if (c === 'Alta') return '#ef4444';
+                      return '#3b82f6';
+                    };
+
+                    return (
+                      <div key={item.id} style={{ marginLeft: isSubtask ? '24px' : '0', marginBottom: '8px' }}>
+                        <div className={`${styles.checklistItem} ${item.status === 'Concluída' ? styles.done : ''}`} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 0 }}>
+                          <div style={{ display: 'flex', alignItems: 'center', gap: '12px', flex: 1 }}>
+                            <input 
+                              type="checkbox" 
+                              checked={item.status === 'Concluída'} 
+                              onChange={() => handleToggleChecklist(item.id, item.status)} 
+                              disabled={disabledCheckbox}
+                              style={{ width: '16px', height: '16px', cursor: disabledCheckbox ? 'not-allowed' : 'pointer' }}
+                              title={hasChildren ? 'A tarefa será concluída automaticamente quando as subtarefas forem concluídas' : ''}
+                            />
+                            <div style={{ flex: 1, textDecoration: item.status === 'Concluída' ? 'line-through' : 'none', color: item.status === 'Concluída' ? 'var(--text-muted)' : 'var(--text-main)', cursor: disabledCheckbox ? 'default' : 'pointer' }} onClick={() => { if (!disabledCheckbox) handleToggleChecklist(item.id, item.status) }}>
+                              {item.titulo}
+                            </div>
+                            
+                            <span style={{ fontSize: '0.7rem', padding: '2px 6px', borderRadius: '4px', border: `1px solid ${getComplexidadeColor(item.complexidade || 'Normal')}`, color: getComplexidadeColor(item.complexidade || 'Normal') }}>
+                              {item.complexidade || 'Normal'}
+                            </span>
+
+                            {canManageChecklist ? (
+                              <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                                {!isSubtask && (
+                                  <button onClick={() => setAddingSubtaskTo(addingSubtaskTo === item.id ? null : item.id)} style={{ fontSize: '0.75rem', padding: '2px 6px', background: addingSubtaskTo === item.id ? 'var(--danger)' : 'var(--background)', border: '1px solid var(--border)', borderRadius: '4px', cursor: 'pointer', color: addingSubtaskTo === item.id ? '#fff' : 'inherit' }}>
+                                    {addingSubtaskTo === item.id ? 'Cancelar' : '+ Subtarefa'}
+                                  </button>
+                                )}
+                                <select 
+                                  value={item.usuario_id || ''} 
+                                  onChange={(e) => handleAssignChecklist(item.id, e.target.value ? Number(e.target.value) : null)}
+                                  style={{ fontSize: '0.75rem', padding: '2px 4px', borderRadius: '4px', border: '1px solid var(--border)' }}
+                                >
+                                  <option value="">Sem responsável</option>
+                                  {usuarios.map(u => (
+                                    <option key={u.id} value={u.id}>{u.nome}</option>
+                                  ))}
+                                </select>
+                                <button 
+                                  onClick={() => handleDeleteChecklist(item.id)}
+                                  style={{ background: 'transparent', border: 'none', color: 'var(--danger)', cursor: 'pointer', padding: '4px', fontSize: '1rem' }}
+                                  title="Excluir tarefa"
+                                >
+                                  &times;
+                                </button>
+                              </div>
+                            ) : (
+                              item.usuario_id ? (
+                                <span className={styles.checklistAssigneeText} style={{ fontSize: '0.75rem', padding: '2px 6px', background: 'var(--surface)', borderRadius: '4px' }}>
+                                  {usuarios.find(u => u.id === item.usuario_id)?.nome || 'Usuário'}
+                                </span>
+                              ) : null
+                            )}
+                          </div>
                         </div>
-                      ) : (
-                        item.usuario_id ? (
-                          <span className={styles.checklistAssigneeText} style={{ fontSize: '0.75rem', padding: '2px 6px', background: 'var(--surface)', borderRadius: '4px' }}>
-                            {usuarios.find(u => u.id === item.usuario_id)?.nome || 'Usuário'}
-                          </span>
-                        ) : null
-                      )}
-                    </div>
-                  </div>
-                ))
+
+                        {addingSubtaskTo === item.id && (
+                          <div style={{ display: 'flex', gap: '8px', marginTop: '8px', marginLeft: '24px' }}>
+                            <input 
+                              type="text" 
+                              placeholder="Nova subtarefa..." 
+                              value={newChecklistTitle} 
+                              onChange={e => setNewChecklistTitle(e.target.value)} 
+                              style={{ flex: 1, padding: '6px', fontSize: '0.85rem', border: '1px solid var(--border)', borderRadius: '4px' }}
+                              onKeyDown={e => { if (e.key === 'Enter') handleAddChecklist(item.id) }}
+                              autoFocus
+                            />
+                            <select 
+                              value={newChecklistComplexidade} 
+                              onChange={e => setNewChecklistComplexidade(e.target.value)} 
+                              style={{ padding: '6px', fontSize: '0.85rem', border: '1px solid var(--border)', borderRadius: '4px' }}
+                            >
+                              <option value="Baixa">Baixa</option>
+                              <option value="Normal">Normal</option>
+                              <option value="Alta">Alta</option>
+                            </select>
+                            <select 
+                              value={newChecklistUserId} 
+                              onChange={e => setNewChecklistUserId(e.target.value)} 
+                              style={{ padding: '6px', fontSize: '0.85rem', border: '1px solid var(--border)', borderRadius: '4px' }}
+                            >
+                              <option value="">(Sem responsável)</option>
+                              {usuarios.map(u => (
+                                <option key={u.id} value={u.id}>{u.nome}</option>
+                              ))}
+                            </select>
+                            <button onClick={() => handleAddChecklist(item.id)} style={{ padding: '6px 12px', fontSize: '0.85rem', background: 'var(--primary)', color: '#fff', border: 'none', borderRadius: '4px', cursor: 'pointer' }}>
+                              Add
+                            </button>
+                          </div>
+                        )}
+
+                        {hasChildren && (
+                          <div style={{ marginTop: '8px' }}>
+                            {children.map((child: any) => renderItem(child, true))}
+                          </div>
+                        )}
+                      </div>
+                    );
+                  };
+
+                  return parentTasks.map((t: any) => renderItem(t, false));
+                })()
               )}
             </div>
           )}
@@ -360,86 +459,119 @@ export default function ProjectModal({ projeto, usuarios, sessao, onClose, onRef
             <div>
                {/* Re-using same logic as old BriefingModal */}
               {Object.entries(briefing).map(([key, value]) => {
-                if (key === 'acessos' || key === 'anexos' || key === 'observacoes') return null;
-                
-                const renderValue = (val: any): React.ReactNode => {
-                  if (val === null || val === undefined || val === '') return 'Não informado';
-                  if (Array.isArray(val)) {
-                    if (val.length === 0) return 'Não informado';
-                    return (
+                // If value is completely empty, don't show
+                if (value === null || value === undefined || value === '') return null;
+                if (Array.isArray(value) && value.length === 0) return null;
+                if (typeof value === 'object' && Object.keys(value).length === 0) return null;
+
+                if (key === 'texto_longo') {
+                  return (
+                    <div key={key} style={{ marginBottom: '24px' }}>
+                      <div style={{ fontSize: '0.85rem', color: 'var(--text-muted)', fontWeight: 600, textTransform: 'uppercase', marginBottom: '12px' }}>Descrição Geral</div>
+                      <div 
+                        style={{ fontSize: '0.95rem', background: 'var(--background)', padding: '16px', borderRadius: '8px', border: '1px solid var(--border)', lineHeight: '1.6' }}
+                        className="tiptap-content"
+                        dangerouslySetInnerHTML={{ __html: String(value) }}
+                      />
+                    </div>
+                  );
+                }
+
+                if (key === 'detalhes') {
+                  const detalhesObj = value as Record<string, string>;
+                  return (
+                    <div key={key} style={{ marginBottom: '24px' }}>
+                      <div style={{ fontSize: '0.85rem', color: 'var(--text-muted)', fontWeight: 600, textTransform: 'uppercase', marginBottom: '12px' }}>Detalhes do Serviço</div>
+                      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(200px, 1fr))', gap: '16px' }}>
+                        {Object.entries(detalhesObj).map(([k, v]) => (
+                          <div key={k} style={{ background: 'var(--surface)', padding: '12px', borderRadius: '8px', border: '1px solid var(--border)' }}>
+                            <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: '4px' }}>{k}</div>
+                            <div style={{ fontSize: '0.95rem', fontWeight: 500, color: 'var(--text-main)' }}>{String(v)}</div>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  );
+                }
+
+                if (key === 'links') {
+                  const linksArr = value as any[];
+                  return (
+                    <div key={key} style={{ marginBottom: '24px' }}>
+                      <div style={{ fontSize: '0.85rem', color: 'var(--text-muted)', fontWeight: 600, textTransform: 'uppercase', marginBottom: '12px' }}>Links Úteis</div>
+                      <div style={{ display: 'flex', flexWrap: 'wrap', gap: '12px' }}>
+                        {linksArr.map((link, idx) => (
+                          <a key={idx} href={link.url} target="_blank" rel="noreferrer" style={{ display: 'inline-flex', alignItems: 'center', gap: '8px', padding: '8px 16px', background: 'var(--secondary)', color: 'var(--primary)', borderRadius: '100px', textDecoration: 'none', fontSize: '0.9rem', fontWeight: 500, transition: 'background 0.2s' }}>
+                            🔗 {link.titulo || 'Acessar Link'}
+                          </a>
+                        ))}
+                      </div>
+                    </div>
+                  );
+                }
+
+                if (key === 'anexos') {
+                  const anexosArr = value as any[];
+                  return (
+                    <div key={key} style={{ marginBottom: '24px' }}>
+                      <div style={{ fontSize: '0.85rem', color: 'var(--text-muted)', fontWeight: 600, textTransform: 'uppercase', marginBottom: '12px' }}>Anexos</div>
                       <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
-                        {val.map((item, idx) => (
-                          <div key={idx} style={{ paddingLeft: '8px', borderLeft: '2px solid var(--border)' }}>
-                            {renderValue(item)}
+                        {anexosArr.map((anexo, idx) => (
+                          <a key={idx} href={anexo.url} target="_blank" rel="noreferrer" style={{ display: 'flex', alignItems: 'center', gap: '12px', padding: '12px 16px', background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: '8px', textDecoration: 'none', color: 'var(--text-main)', transition: 'border-color 0.2s' }}>
+                            <span style={{ fontSize: '1.2rem' }}>📎</span>
+                            <div>
+                              <div style={{ fontWeight: 500 }}>{anexo.nome || 'Documento'}</div>
+                              <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>Clique para visualizar</div>
+                            </div>
+                          </a>
+                        ))}
+                      </div>
+                    </div>
+                  );
+                }
+
+                if (key === 'acessos') {
+                  const acessosArr = value as any[];
+                  return (
+                    <div key={key} style={{ marginBottom: '24px' }}>
+                      <div style={{ fontSize: '0.85rem', color: 'var(--text-muted)', fontWeight: 600, textTransform: 'uppercase', marginBottom: '12px' }}>Acessos Restritos</div>
+                      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(250px, 1fr))', gap: '16px' }}>
+                        {acessosArr.map((acesso, idx) => (
+                          <div key={idx} style={{ background: 'var(--surface)', padding: '16px', border: '1px solid var(--border)', borderRadius: '8px' }}>
+                            <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '12px' }}>
+                              <span style={{ fontSize: '1.2rem' }}>🔑</span>
+                              <strong style={{ fontSize: '1rem', color: 'var(--text-main)' }}>{acesso.plataforma}</strong>
+                            </div>
+                            <div style={{ fontSize: '0.9rem', marginBottom: '4px' }}><span style={{ color: 'var(--text-muted)' }}>Login:</span> {acesso.login}</div>
+                            <div style={{ fontSize: '0.9rem' }}><span style={{ color: 'var(--text-muted)' }}>Senha:</span> <code style={{ background: 'var(--background)', padding: '2px 6px', borderRadius: '4px', border: '1px solid var(--border)' }}>{acesso.senha || '---'}</code></div>
                           </div>
                         ))}
                       </div>
-                    );
-                  }
-                  if (typeof val === 'object') {
-                    if (Object.keys(val).length === 0) return 'Não informado';
-                    return (
-                      <div style={{ display: 'flex', flexDirection: 'column', gap: '6px', marginTop: '4px' }}>
-                        {Object.entries(val).map(([subKey, subVal]) => (
-                          <div key={subKey} style={{ background: 'rgba(0,0,0,0.02)', padding: '6px 8px', borderRadius: '4px', border: '1px solid var(--border)' }}>
-                            <span style={{ fontWeight: 600, color: 'var(--text-muted)', marginRight: '6px' }}>{subKey}:</span>
-                            <span style={{ color: 'var(--text-main)' }}>{renderValue(subVal)}</span>
-                          </div>
-                        ))}
+                    </div>
+                  );
+                }
+
+                if (key === 'observacoes') {
+                  return (
+                    <div key={key} style={{ marginBottom: '24px' }}>
+                      <div style={{ fontSize: '0.85rem', color: 'var(--text-muted)', fontWeight: 600, textTransform: 'uppercase', marginBottom: '12px' }}>Observações</div>
+                      <div style={{ fontSize: '0.95rem', whiteSpace: 'pre-wrap', background: '#fffbeb', color: '#b45309', padding: '16px', borderRadius: '8px', border: '1px solid #fde68a' }}>
+                        {String(value)}
                       </div>
-                    );
-                  }
-                  
-                  // Se for string com cara de URL, transforma em link
-                  if (typeof val === 'string' && (val.startsWith('http://') || val.startsWith('https://'))) {
-                    return <a href={val} target="_blank" rel="noreferrer" style={{ color: 'var(--primary)', textDecoration: 'underline' }}>{val}</a>;
-                  }
+                    </div>
+                  );
+                }
 
-                  return String(val);
-                };
-
-                const displayValue = renderValue(value);
-
+                // Fallback for custom generic fields
                 return (
                   <div key={key} style={{ marginBottom: '16px' }}>
-                    <div style={{ fontSize: '0.85rem', color: 'var(--text-muted)', fontWeight: 600, textTransform: 'uppercase' }}>{key.replace(/_/g, ' ')}</div>
-                    <div style={{ fontSize: '0.95rem', background: (typeof value === 'object' && value !== null) ? 'transparent' : 'var(--background)', padding: (typeof value === 'object' && value !== null) ? '0' : '8px 12px', borderRadius: '4px', marginTop: '4px', border: (typeof value === 'object' && value !== null) ? 'none' : '1px solid var(--border)' }}>
-                      {displayValue}
+                    <div style={{ fontSize: '0.85rem', color: 'var(--text-muted)', fontWeight: 600, textTransform: 'uppercase', marginBottom: '4px' }}>{key.replace(/_/g, ' ')}</div>
+                    <div style={{ fontSize: '0.95rem', background: 'var(--background)', padding: '12px', borderRadius: '8px', border: '1px solid var(--border)' }}>
+                      {typeof value === 'object' ? JSON.stringify(value) : String(value)}
                     </div>
                   </div>
                 );
               })}
-
-              {briefing.observacoes && (
-                <div style={{ marginBottom: '24px' }}>
-                  <h4 style={{ color: 'var(--primary)', marginBottom: '8px' }}>Observações</h4>
-                  <div style={{ fontSize: '0.95rem', whiteSpace: 'pre-wrap' }}>{briefing.observacoes}</div>
-                </div>
-              )}
-
-              {briefing.anexos && briefing.anexos.length > 0 && (
-                <div style={{ marginBottom: '24px' }}>
-                  <h4 style={{ color: 'var(--primary)', marginBottom: '8px' }}>Anexos</h4>
-                  {briefing.anexos.map((anexo: any, index: number) => (
-                    <a key={index} href={anexo.url} target="_blank" rel="noreferrer" style={{ display: 'block', color: 'var(--primary)', textDecoration: 'none', marginBottom: '4px' }}>
-                      {anexo.nome}: {anexo.url}
-                    </a>
-                  ))}
-                </div>
-              )}
-
-              {briefing.acessos && briefing.acessos.length > 0 && (
-                <div style={{ marginBottom: '24px' }}>
-                  <h4 style={{ color: 'var(--primary)', marginBottom: '8px' }}>Acessos (Descriptografados)</h4>
-                  {briefing.acessos.map((acesso: any, index: number) => (
-                    <div key={index} style={{ background: 'var(--background)', padding: '8px', border: '1px solid var(--border)', borderRadius: '4px', marginBottom: '8px' }}>
-                      <strong>{acesso.plataforma}</strong><br/>
-                      Login: {acesso.login}<br/>
-                      Senha: {acesso.senha || 'Não informada'}
-                    </div>
-                  ))}
-                </div>
-              )}
             </div>
           )}
 

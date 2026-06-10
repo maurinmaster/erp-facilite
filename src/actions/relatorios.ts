@@ -88,6 +88,7 @@ export interface RelatorioEntregaDetalhe {
   servico: string;
   data_entrega: string;
   prazo: string | null;
+  prazo_interno: string | null;
   atrasado_na_entrega: boolean;
 }
 
@@ -110,6 +111,7 @@ export async function getRelatorioEntregas(): Promise<RelatorioEntregasResumo> {
         p.id as projeto_id,
         p.status as projeto_status,
         p.prazo as projeto_prazo,
+        p.prazo_interno as projeto_prazo_interno,
         p.updated_at,
         s.nome as servico_nome,
         c.nome as cliente_nome
@@ -151,6 +153,7 @@ export async function getRelatorioEntregas(): Promise<RelatorioEntregasResumo> {
             servico: row.servico_nome,
             data_entrega: row.updated_at,
             prazo: row.projeto_prazo,
+            prazo_interno: row.projeto_prazo_interno,
             atrasado_na_entrega: prazoDate ? updatedAtDate > prazoDate : false
           });
         }
@@ -183,12 +186,20 @@ export interface RelatorioEquipeDetalhe {
   perfil: string;
   projetos_atuais: number;
   tarefas_concluidas: number;
+  subtarefas_concluidas: number;
+  pontos_esforco: number;
+  tarefas_no_prazo: number;
+  tarefas_em_atraso: number;
 }
 
 export interface RelatorioEquipeResumo {
   total_membros: number;
   tarefas_concluidas_total: number;
+  subtarefas_concluidas_total: number;
   projetos_alocados: number;
+  pontos_esforco_total: number;
+  tarefas_no_prazo_total: number;
+  tarefas_em_atraso_total: number;
   detalhes: RelatorioEquipeDetalhe[];
 }
 
@@ -201,10 +212,19 @@ export async function getRelatorioEquipe(): Promise<RelatorioEquipeResumo> {
     const [usuarios] = await pool.query<RowDataPacket[]>('SELECT id, nome, email, perfil FROM usuarios ORDER BY nome ASC');
     
     const [tarefas] = await pool.query<RowDataPacket[]>(`
-      SELECT usuario_id, COUNT(*) as count 
-      FROM tarefas_producao 
-      WHERE status = 'Concluída' AND deleted_at IS NULL AND usuario_id IS NOT NULL
-      GROUP BY usuario_id
+      SELECT 
+        tp.usuario_id, 
+        SUM(CASE WHEN tp.parent_id IS NULL THEN 1 ELSE 0 END) as tarefas_principais,
+        SUM(CASE WHEN tp.parent_id IS NOT NULL THEN 1 ELSE 0 END) as subtarefas,
+        SUM(CASE WHEN tp.complexidade = 'Baixa' THEN 1 
+                 WHEN tp.complexidade = 'Alta' THEN 3 
+                 ELSE 2 END) as pontos,
+        SUM(CASE WHEN p.prazo_interno IS NOT NULL AND DATE(tp.concluido_em) > p.prazo_interno THEN 1 ELSE 0 END) as tarefas_atrasadas,
+        SUM(CASE WHEN p.prazo_interno IS NULL OR DATE(tp.concluido_em) <= p.prazo_interno THEN 1 ELSE 0 END) as tarefas_no_prazo
+      FROM tarefas_producao tp
+      JOIN projetos_producao p ON tp.projeto_producao_id = p.id
+      WHERE tp.status = 'Concluída' AND tp.deleted_at IS NULL AND tp.usuario_id IS NOT NULL
+      GROUP BY tp.usuario_id
     `);
 
     const [projetos] = await pool.query<RowDataPacket[]>(`
@@ -217,12 +237,26 @@ export async function getRelatorioEquipe(): Promise<RelatorioEquipeResumo> {
 
     let total_membros = usuarios.length;
     let tarefas_concluidas_total = 0;
+    let subtarefas_concluidas_total = 0;
     let projetos_alocados = 0;
+    let pontos_esforco_total = 0;
+    let tarefas_no_prazo_total = 0;
+    let tarefas_em_atraso_total = 0;
 
-    const mapTarefas: Record<number, number> = {};
+    const mapTarefas: Record<number, { princ: number, sub: number, pts: number, no_prazo: number, atrasadas: number }> = {};
     for (const t of tarefas) {
-      mapTarefas[t.usuario_id] = Number(t.count);
-      tarefas_concluidas_total += Number(t.count);
+      mapTarefas[t.usuario_id] = { 
+        princ: Number(t.tarefas_principais), 
+        sub: Number(t.subtarefas), 
+        pts: Number(t.pontos),
+        no_prazo: Number(t.tarefas_no_prazo),
+        atrasadas: Number(t.tarefas_atrasadas)
+      };
+      tarefas_concluidas_total += Number(t.tarefas_principais);
+      subtarefas_concluidas_total += Number(t.subtarefas);
+      pontos_esforco_total += Number(t.pontos);
+      tarefas_no_prazo_total += Number(t.tarefas_no_prazo);
+      tarefas_em_atraso_total += Number(t.tarefas_atrasadas);
     }
 
     const mapProjetos: Record<number, number> = {};
@@ -231,19 +265,31 @@ export async function getRelatorioEquipe(): Promise<RelatorioEquipeResumo> {
       projetos_alocados += Number(p.count);
     }
 
-    const detalhes: RelatorioEquipeDetalhe[] = usuarios.map(u => ({
-      id: u.id,
-      nome: u.nome,
-      email: u.email,
-      perfil: u.perfil,
-      projetos_atuais: mapProjetos[u.id] || 0,
-      tarefas_concluidas: mapTarefas[u.id] || 0
-    }));
+    const detalhes: RelatorioEquipeDetalhe[] = usuarios.map(u => {
+      const tar = mapTarefas[u.id] || { princ: 0, sub: 0, pts: 0, no_prazo: 0, atrasadas: 0 };
+      const proj = mapProjetos[u.id] || 0;
+      return {
+        id: u.id,
+        nome: u.nome,
+        email: u.email,
+        perfil: u.perfil,
+        projetos_atuais: proj,
+        tarefas_concluidas: tar.princ,
+        subtarefas_concluidas: tar.sub,
+        pontos_esforco: tar.pts,
+        tarefas_no_prazo: tar.no_prazo,
+        tarefas_em_atraso: tar.atrasadas
+      };
+    });
 
     return {
       total_membros,
       tarefas_concluidas_total,
+      subtarefas_concluidas_total,
       projetos_alocados,
+      pontos_esforco_total,
+      tarefas_no_prazo_total,
+      tarefas_em_atraso_total,
       detalhes
     };
   } catch (error) {

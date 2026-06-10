@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import { Inter } from "next/font/google";
 import { getSession } from "@/actions/auth";
 import Sidebar from "@/app/components/Sidebar";
+import BroadcastListener from "@/app/components/BroadcastListener";
 import "./globals.css";
 
 const inter = Inter({
@@ -34,6 +35,8 @@ export default async function RootLayout({
             </div>
           </main>
         </div>
+        
+        {session && <BroadcastListener />}
       </body>
     </html>
   );

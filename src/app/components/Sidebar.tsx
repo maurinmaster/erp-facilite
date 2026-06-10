@@ -1,5 +1,6 @@
 'use client';
 
+import React, { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { 
@@ -14,11 +15,13 @@ import {
   Settings,
   Trash2,
   LogOut,
-  BarChart3
+  BarChart3,
+  Mail
 } from 'lucide-react';
 import NotificationBell from './NotificationBell';
 import styles from './sidebar.module.css';
 import { logout } from '@/actions/auth';
+import { getSidebarBadgeCounts, SidebarCounts } from '@/actions/sidebar';
 
 interface SidebarProps {
   session: any;
@@ -26,6 +29,48 @@ interface SidebarProps {
 
 export default function Sidebar({ session }: SidebarProps) {
   const pathname = usePathname();
+  const [counts, setCounts] = useState<SidebarCounts>({ unreadCorreio: 0, unreadChat: 0, pendingProducao: 0 });
+
+  useEffect(() => {
+    if (!session) return;
+    
+    let mounted = true;
+    const fetchCounts = async () => {
+      try {
+        const c = await getSidebarBadgeCounts();
+        if (mounted) setCounts(c);
+      } catch (err) {}
+    };
+
+    fetchCounts();
+
+    const setupSocket = async () => {
+      const { io } = await import('socket.io-client');
+      const socket = io('http://localhost:3001');
+      socket.on('connect', () => {
+        socket.emit('join_user', session.id);
+      });
+      const refresh = () => fetchCounts();
+      socket.on('nova_notificacao', refresh);
+      socket.on('nova_mensagem', refresh);
+
+      return () => {
+        socket.disconnect();
+      };
+    };
+
+    let cleanup: any;
+    setupSocket().then(c => cleanup = c);
+
+    // Also poll every 30 seconds
+    const interval = setInterval(fetchCounts, 30000);
+
+    return () => {
+      mounted = false;
+      clearInterval(interval);
+      if (cleanup) cleanup();
+    };
+  }, [session]);
 
   if (!session) return null;
 
@@ -36,6 +81,7 @@ export default function Sidebar({ session }: SidebarProps) {
   const canViewProducao = isAdmin || (permissoes.producao && permissoes.producao !== 'none');
   const canViewHoje = canViewDashboard || canViewProducao;
   const canViewMensagens = isAdmin || (permissoes.mensagens && permissoes.mensagens !== 'none');
+  const canViewCorreio = isAdmin || (permissoes.correio && permissoes.correio !== 'none');
   const canViewClientes = isAdmin || (permissoes.clientes && permissoes.clientes !== 'none');
   
   const canViewCatalogo = isAdmin || (permissoes.catalogo && permissoes.catalogo !== 'none');
@@ -74,6 +120,7 @@ export default function Sidebar({ session }: SidebarProps) {
           <Link href="/producao" className={`${styles.navItem} ${pathname === '/producao' ? styles.navItemActive : ''}`}>
             <KanbanSquare size={20} />
             Produção
+            {counts.pendingProducao > 0 && <div className={styles.badge}>{counts.pendingProducao}</div>}
           </Link>
         )}
         
@@ -81,6 +128,15 @@ export default function Sidebar({ session }: SidebarProps) {
           <Link href="/mensagens" className={`${styles.navItem} ${pathname === '/mensagens' ? styles.navItemActive : ''}`}>
             <MessageCircle size={20} />
             Chat
+            {counts.unreadChat > 0 && <div className={styles.badge}>{counts.unreadChat}</div>}
+          </Link>
+        )}
+
+        {canViewCorreio && (
+          <Link href="/correio" className={`${styles.navItem} ${pathname.startsWith('/correio') ? styles.navItemActive : ''}`}>
+            <Mail size={20} />
+            Correio
+            {counts.unreadCorreio > 0 && <div className={styles.badge}>{counts.unreadCorreio}</div>}
           </Link>
         )}
 

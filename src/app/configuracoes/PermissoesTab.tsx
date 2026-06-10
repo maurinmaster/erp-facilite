@@ -16,6 +16,8 @@ const MODULOS = [
   { id: 'catalogo', nome: 'Catálogo de Serviços' },
   { id: 'equipe', nome: 'Membros da Equipe' },
   { id: 'mensagens', nome: 'Mensagens / Notificações' },
+  { id: 'correio', nome: 'Correio Interno (E-mail)' },
+  { id: 'enviar_alertas', nome: 'Pode Enviar Alertas (Popups)' },
   { id: 'configuracoes', nome: 'Configurações Globais' }
 ];
 

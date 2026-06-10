@@ -43,7 +43,7 @@ export default function DashboardCharts({
       <div style={cardStyle}>
         <div style={titleStyle}>Clientes por Serviço</div>
         <div style={{ width: '100%', height: 250 }}>
-          <ResponsiveContainer>
+          <ResponsiveContainer width="100%" height="100%" minWidth={0} minHeight={0}>
             <PieChart>
               <Pie
                 data={clientesPorServico}
@@ -71,7 +71,7 @@ export default function DashboardCharts({
       <div style={cardStyle}>
         <div style={titleStyle}>Entregas da Semana</div>
         <div style={{ width: '100%', height: 250 }}>
-          <ResponsiveContainer>
+          <ResponsiveContainer width="100%" height="100%" minWidth={0} minHeight={0}>
             <BarChart
               data={entregasDaSemana}
               margin={{ top: 10, right: 10, left: -20, bottom: 0 }}
@@ -89,7 +89,7 @@ export default function DashboardCharts({
       <div style={cardStyle}>
         <div style={titleStyle}>Pendências por Responsável</div>
         <div style={{ width: '100%', height: 250 }}>
-          <ResponsiveContainer>
+          <ResponsiveContainer width="100%" height="100%" minWidth={0} minHeight={0}>
             <BarChart
               data={pendenciasPorResponsavel}
               margin={{ top: 10, right: 10, left: -20, bottom: 0 }}

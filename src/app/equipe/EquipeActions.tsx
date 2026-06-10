@@ -4,6 +4,8 @@ import { useState } from 'react';
 import Link from 'next/link';
 import { deleteUsuario, updateSenhaUsuario, updatePerfilUsuario } from '@/actions/auth';
 
+import styles from './equipe.module.css';
+
 export default function EquipeActions({ usuarioId, isSelf, perfisValidos = ['Admin', 'Gestor', 'Operador'] }: { usuarioId: number, isSelf: boolean, perfisValidos?: string[] }) {
   const [loading, setLoading] = useState(false);
 
@@ -68,21 +70,21 @@ export default function EquipeActions({ usuarioId, isSelf, perfisValidos = ['Adm
     <div style={{ display: 'flex', gap: '8px', opacity: loading ? 0.5 : 1, marginTop: '12px' }}>
       <Link 
         href={`/equipe/${usuarioId}`} 
-        style={{ background: 'none', border: '1px solid var(--primary)', color: 'var(--primary)', padding: '6px 12px', borderRadius: '4px', cursor: 'pointer', fontSize: '0.75rem', textAlign: 'center', textDecoration: 'none', fontWeight: 500 }}
+        className={`${styles.actionBtn} ${styles.actionBtnPrimary}`}
       >
         Desempenho
       </Link>
       <button 
         onClick={handleUpdatePerfil} 
         disabled={loading}
-        style={{ fontSize: '0.75rem', padding: '6px 12px', background: 'var(--surface)', color: 'var(--text-main)', border: '1px solid var(--border)', borderRadius: '4px', cursor: 'pointer', fontWeight: 500 }}
+        className={styles.actionBtn}
       >
         Trocar Perfil
       </button>
       <button 
         onClick={handleUpdatePassword} 
         disabled={loading}
-        style={{ fontSize: '0.75rem', padding: '6px 12px', background: 'var(--surface)', color: 'var(--text-main)', border: '1px solid var(--border)', borderRadius: '4px', cursor: 'pointer', fontWeight: 500 }}
+        className={styles.actionBtn}
       >
         Trocar Senha
       </button>
@@ -90,7 +92,7 @@ export default function EquipeActions({ usuarioId, isSelf, perfisValidos = ['Adm
         <button 
           onClick={handleDelete} 
           disabled={loading}
-          style={{ fontSize: '0.75rem', padding: '6px 12px', background: '#fef2f2', color: '#dc2626', border: '1px solid #fecaca', borderRadius: '4px', cursor: 'pointer', fontWeight: 500 }}
+          className={`${styles.actionBtn} ${styles.actionBtnDanger}`}
         >
           Remover Membro
         </button>

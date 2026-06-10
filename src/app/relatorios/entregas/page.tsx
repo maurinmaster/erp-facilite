@@ -68,7 +68,9 @@ export default async function RelatorioEntregasPage() {
             <tr>
               <th>Projeto / Serviço</th>
               <th>Cliente</th>
-              <th>Status do Prazo</th>
+              <th>Prazo (Cliente)</th>
+              <th>Prazo Interno</th>
+              <th>Status da Entrega</th>
               <th>Data de Entrega</th>
             </tr>
           </thead>
@@ -80,6 +82,12 @@ export default async function RelatorioEntregasPage() {
                 </td>
                 <td>
                   {entrega.cliente}
+                </td>
+                <td>
+                  {entrega.prazo ? new Date(entrega.prazo).toLocaleDateString('pt-BR', { timeZone: 'UTC' }) : '-'}
+                </td>
+                <td>
+                  {entrega.prazo_interno ? new Date(entrega.prazo_interno).toLocaleDateString('pt-BR', { timeZone: 'UTC' }) : '-'}
                 </td>
                 <td>
                   {entrega.atrasado_na_entrega ? (
@@ -95,7 +103,7 @@ export default async function RelatorioEntregasPage() {
             ))}
             {relatorio.ultimas_entregas.length === 0 && (
               <tr>
-                <td colSpan={4} style={{ textAlign: 'center', padding: '2rem', color: 'var(--text-muted)' }}>
+                <td colSpan={6} style={{ textAlign: 'center', padding: '2rem', color: 'var(--text-muted)' }}>
                   Nenhum projeto finalizado ainda.
                 </td>
               </tr>

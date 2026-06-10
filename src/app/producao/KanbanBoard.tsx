@@ -12,7 +12,8 @@ interface ProjetoKanban {
   projeto_status: string;
   prioridade: string;
   prazo: string | null;
-  tags: string[];
+  prazo_interno?: string | null;
+  tags: string[] | null;
   contrato_item_id: number;
   servico_nome: string;
   servico_tipo: string;
@@ -298,9 +299,15 @@ export default function KanbanBoard({ projetosIniciais, usuarios, sessao }: Prop
                           </div>
                           <div className={styles.footerRight}>
                             {projeto.prazo && (
-                              <div className={`${styles.dateBlock} ${isAtrasado(projeto.prazo) ? styles.atrasado : ''}`} title="Prazo">
+                              <div className={`${styles.dateBlock} ${isAtrasado(projeto.prazo) ? styles.atrasado : ''}`} title="Prazo (Cliente)">
                                 <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"></rect><line x1="16" y1="2" x2="16" y2="6"></line><line x1="8" y1="2" x2="8" y2="6"></line><line x1="3" y1="10" x2="21" y2="10"></line></svg>
                                 <span>{new Date(projeto.prazo).toLocaleDateString('pt-BR', { timeZone: 'UTC' })}</span>
+                              </div>
+                            )}
+                            {projeto.prazo_interno && (
+                              <div className={`${styles.dateBlock} ${isAtrasado(projeto.prazo_interno) ? styles.atrasado : ''}`} style={{ backgroundColor: '#e0f2fe', color: '#0369a1', borderColor: '#bae6fd' }} title="Prazo Interno">
+                                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10"></circle><polyline points="12 6 12 12 16 14"></polyline></svg>
+                                <span>{new Date(projeto.prazo_interno).toLocaleDateString('pt-BR', { timeZone: 'UTC' })}</span>
                               </div>
                             )}
                             {checkTotal > 0 && (
@@ -361,8 +368,17 @@ export default function KanbanBoard({ projetosIniciais, usuarios, sessao }: Prop
                         {projeto.projeto_status}
                       </span>
                     </td>
-                    <td className={styles.tableCell} style={{ color: isAtrasado(projeto.prazo) ? 'var(--danger)' : 'var(--text-main)' }}>
-                      {projeto.prazo ? new Date(projeto.prazo).toLocaleDateString('pt-BR', { timeZone: 'UTC' }) : '-'}
+                    <td className={styles.tableCell}>
+                      <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
+                        <span style={{ color: isAtrasado(projeto.prazo) ? 'var(--danger)' : 'var(--text-main)' }}>
+                          Cliente: {projeto.prazo ? new Date(projeto.prazo).toLocaleDateString('pt-BR', { timeZone: 'UTC' }) : '-'}
+                        </span>
+                        {projeto.prazo_interno && (
+                          <span style={{ fontSize: '0.8rem', color: isAtrasado(projeto.prazo_interno) ? 'var(--danger)' : '#0369a1' }}>
+                            Interno: {new Date(projeto.prazo_interno).toLocaleDateString('pt-BR', { timeZone: 'UTC' })}
+                          </span>
+                        )}
+                      </div>
                     </td>
                     <td className={styles.tableCell}>
                       <span className={styles.priorityFlag} data-priority={projeto.prioridade}>

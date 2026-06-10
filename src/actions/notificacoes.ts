@@ -7,7 +7,7 @@ import { revalidatePath } from 'next/cache';
 
 export interface Notificacao {
   id: number;
-  tipo: 'MENSAGEM' | 'MENCAO' | 'SISTEMA';
+  tipo: 'MENSAGEM' | 'MENCAO' | 'SISTEMA' | 'CORREIO';
   titulo: string;
   mensagem: string | null;
   link: string | null;
@@ -62,7 +62,7 @@ export async function criarNotificacao({
 }: {
   usuario_id: number;
   remetente_id?: number;
-  tipo: 'MENSAGEM' | 'MENCAO' | 'SISTEMA';
+  tipo: 'MENSAGEM' | 'MENCAO' | 'SISTEMA' | 'CORREIO';
   titulo: string;
   mensagem?: string;
   link?: string;
