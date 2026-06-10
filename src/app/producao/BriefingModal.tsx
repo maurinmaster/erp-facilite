@@ -136,6 +136,7 @@ export default function BriefingModal({ tarefa, onClose }: BriefingModalProps) {
                 </div>
               );
             })}
+          </div>
         </div>
       </div>
     </div>
