@@ -142,6 +142,8 @@ CREATE TABLE IF NOT EXISTS projetos_producao (
   id INT AUTO_INCREMENT PRIMARY KEY,
   contrato_item_id INT NOT NULL,
   status VARCHAR(50) DEFAULT 'A Fazer',
+  prioridade VARCHAR(50) DEFAULT 'Normal',
+  tags JSON NULL,
   kanban_coluna_id INT NULL,
   prazo_interno DATETIME NULL,
   created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
@@ -316,5 +318,5 @@ INSERT IGNORE INTO kanban_colunas (id, titulo, ordem, cor) VALUES
 -- Administrador Padrão
 -- Senha: "123456" hasheada conforme o padrão do ERP
 INSERT INTO usuarios (nome, email, senha_hash, perfil) VALUES 
-  ('Administrador', 'admin@erpfacilite.com', 'a3f8c85777174e92a83971c26bdf3b9e:e0fb9dc2ab37f48b99092408c4cc9027814b7e1b54a01a3ce8a3bca41e174092b60ab15fb0a2944b209d23193e506d338162235941c2c8f6cdb6c368297b47b4', 'Admin');
+  ('Administrador', 'admin@erpfacilite.com', 'c61e981f29d8e9a597cebc5f2c715075:d1dec18a9a7744219cf51859e3c5f9ccecba4261bdad0747a8dc0e9f184ec67a31712149c1adda63a97d9c328d6aa6e483a8cbe80763ba8a8af6292f0d29001c', 'Admin');
 
