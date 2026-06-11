@@ -1,0 +1,34 @@
+version: '3.8'
+
+services:
+  erp-app:
+    build: 
+      context: .
+      dockerfile: Dockerfile
+    container_name: erp-facilite-app
+    restart: always
+    ports:
+      - "3000:3000"
+    environment:
+      - NODE_ENV=production
+      - NEXT_PUBLIC_APP_URL=${NEXT_PUBLIC_APP_URL}
+      - NEXT_PUBLIC_WS_URL=${NEXT_PUBLIC_WS_URL}
+      - INTERNAL_WS_URL=${INTERNAL_WS_URL}
+      - MYSQL_HOST=${MYSQL_HOST}
+      - MYSQL_USER=${MYSQL_USER}
+      - MYSQL_PASSWORD=${MYSQL_PASSWORD}
+      - MYSQL_DATABASE=${MYSQL_DATABASE}
+      - JWT_SECRET=${JWT_SECRET}
+
+  erp-ws:
+    build: 
+      context: .
+      dockerfile: Dockerfile
+    container_name: erp-facilite-ws
+    restart: always
+    ports:
+      - "3001:3001"
+    # Override CMD to run the websocket server instead of next.js
+    command: ["node", "server/ws.js"]
+    environment:
+      - NEXT_PUBLIC_APP_URL=${NEXT_PUBLIC_APP_URL}

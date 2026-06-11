@@ -1,0 +1,22 @@
+name: Deploy to Hostinger VPS
+
+on:
+  push:
+    branches:
+      - main
+      - master
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v3
+
+      - name: Deploy to Hostinger
+        uses: hostinger/deploy-on-vps@v2
+        with:
+          # Crie essas Secrets no painel do seu GitHub (Settings > Secrets and variables > Actions)
+          api-key: ${{ secrets.HOSTINGER_API_KEY }}
+          virtual-machine: ${{ secrets.HOSTINGER_VM_ID }}
