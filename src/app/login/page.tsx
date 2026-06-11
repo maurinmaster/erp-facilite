@@ -15,10 +15,17 @@ export default function LoginPage() {
     
     const formData = new FormData(e.currentTarget);
     try {
-      await login(formData);
+      const res = await login(formData);
+      if (res?.error) {
+        setError(res.error);
+        setLoading(false);
+      }
     } catch (err: any) {
-      setError(err.message || 'Erro ao realizar login.');
-      setLoading(false);
+      // Falhas internas do servidor ou redirects
+      if (err.message && err.message !== 'NEXT_REDIRECT') {
+        setError('Erro interno do servidor.');
+        setLoading(false);
+      }
     }
   };
 

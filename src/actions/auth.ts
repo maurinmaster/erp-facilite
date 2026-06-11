@@ -31,7 +31,7 @@ export async function login(formData: FormData) {
   const password = formData.get('password') as string;
 
   if (!email || !password) {
-    throw new Error('E-mail e senha são obrigatórios');
+    return { error: 'E-mail e senha são obrigatórios' };
   }
 
   const [rows] = await pool.query<RowDataPacket[]>(
@@ -40,7 +40,7 @@ export async function login(formData: FormData) {
   );
 
   if (rows.length === 0) {
-    throw new Error('Credenciais inválidas');
+    return { error: 'Credenciais inválidas' };
   }
 
   const user = rows[0];
@@ -48,7 +48,7 @@ export async function login(formData: FormData) {
   const isValid = verifyPassword(password, user.senha_hash);
   
   if (!isValid) {
-    throw new Error('Credenciais inválidas');
+    return { error: 'Credenciais inválidas' };
   }
 
   // Criar token JWT com Jose
@@ -63,14 +63,15 @@ export async function login(formData: FormData) {
     .setExpirationTime('24h')
     .sign(key);
 
-  // Salvar no cookie (HttpOnly)
-  const cookieStore = await cookies();
-  cookieStore.set('facilite_session', token, {
+  const cookiesInstance = await cookies();
+  cookiesInstance.set('facilite_session', token, {
     httpOnly: true,
     secure: process.env.NODE_ENV === 'production',
     sameSite: 'lax',
-    maxAge: 60 * 60 * 24 // 1 dia
+    maxAge: 60 * 60 * 24 // 24 horas
   });
+
+  // NÃO retorne nada aqui se houver redirecionamento! O redirect joga um erro especial que precisa propagar.
 
   redirect('/');
 }
