@@ -32,7 +32,8 @@ export default function ChatArea({
   useEffect(() => {
     const setupSocket = async () => {
       const { io } = await import('socket.io-client');
-      const socket = io('http://localhost:3001');
+      const wsUrl = process.env.NEXT_PUBLIC_WS_URL || 'http://localhost:3001';
+      const socket = io(wsUrl);
       
       socket.on('connect', () => {
         socket.emit('join_user', myUserId);

@@ -77,7 +77,8 @@ export async function criarNotificacao({
 
     // Dispara o evento pro servidor WebSocket
     try {
-      fetch('http://localhost:3001/emit', {
+      const wsUrl = process.env.INTERNAL_WS_URL || 'http://localhost:3001/emit';
+      fetch(wsUrl, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({

@@ -5,10 +5,10 @@ const { Server } = require('socket.io');
 const app = express();
 const httpServer = createServer(app);
 
-// Configuração do CORS: Permite que o Frontend (porta 3000) converse com o WS (porta 3001)
+// Configuração do CORS: Permite que o Frontend converse com o WS
 const io = new Server(httpServer, {
   cors: {
-    origin: "http://localhost:3000",
+    origin: process.env.NEXT_PUBLIC_APP_URL || "http://localhost:3000",
     methods: ["GET", "POST"]
   }
 });
@@ -25,27 +25,42 @@ app.post('/emit', (req, res) => {
     io.to(`user_${userId}`).emit(event, payload);
     return res.status(200).json({ success: true });
   }
-  res.status(400).json({ error: 'Missing parameters' });
+
+  // Notificações em Grupo (ex: Briefing atualizado)
+  const { groupId } = req.body;
+  if (event && groupId) {
+    io.to(`group_${groupId}`).emit(event, payload);
+    return res.status(200).json({ success: true });
+  }
+
+  return res.status(400).json({ error: 'Missing event, userId or groupId' });
 });
 
-// Conexão do Socket do lado do Cliente (Navegador)
+// Conexões via WebSocket (do Frontend)
 io.on('connection', (socket) => {
-  console.log(`[WS] Novo cliente conectado: ${socket.id}`);
+  console.log('Um usuário conectou:', socket.id);
 
-  // Quando o frontend carrega, ele manda o ID do usuário para entrar na sala pessoal
+  // O Frontend manda esse evento para dizer "Eu sou o usuário ID 5"
   socket.on('join_user', (userId) => {
-    const roomName = `user_${userId}`;
-    socket.join(roomName);
-    console.log(`[WS] Cliente ${socket.id} entrou na sala ${roomName}`);
+    if (userId) {
+      socket.join(`user_${userId}`);
+      console.log(`Socket ${socket.id} entrou na sala user_${userId}`);
+    }
+  });
+
+  socket.on('join_group', (groupId) => {
+    if (groupId) {
+      socket.join(`group_${groupId}`);
+      console.log(`Socket ${socket.id} entrou na sala group_${groupId}`);
+    }
   });
 
   socket.on('disconnect', () => {
-    console.log(`[WS] Cliente desconectado: ${socket.id}`);
+    console.log('Usuário desconectou:', socket.id);
   });
 });
 
-const PORT = process.env.WS_PORT || 3001;
-
+const PORT = 3001;
 httpServer.listen(PORT, () => {
-  console.log(`[WS] Servidor WebSocket rodando na porta ${PORT}`);
+  console.log(`Servidor de WebSockets rodando na porta ${PORT}`);
 });

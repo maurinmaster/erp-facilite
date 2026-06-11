@@ -269,7 +269,7 @@ export default function KanbanBoard({ projetosIniciais, usuarios, sessao }: Prop
                         </div>
 
                         <div className={styles.tagsContainer}>
-                          {projeto.tags.map((tag, i) => (
+                          {(projeto.tags || []).map((tag, i) => (
                             <span key={i} className={`${styles.tag} ${styles.tagDefault}`}>{tag}</span>
                           ))}
                           {projeto.prioridade && (

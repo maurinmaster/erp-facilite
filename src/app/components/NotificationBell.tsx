@@ -30,7 +30,8 @@ export default function NotificationBell() {
       const session = await getSession();
       if (!session) return;
 
-      const socket = io('http://localhost:3001');
+      const wsUrl = process.env.NEXT_PUBLIC_WS_URL || 'http://localhost:3001';
+      const socket = io(wsUrl);
       
       const joinRoom = () => {
         socket.emit('join_user', session.id);
